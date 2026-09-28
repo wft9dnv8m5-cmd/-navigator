@@ -8,10 +8,10 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <style>
 :root{--bg:#eef1f4;--card:#fff;--ink:#142033;--mut:#5d6b7c;--line:#dbe2ea;--brand:#1b3a5c;--acc:#f5a524;--g:#16a34a}
-*{box-sizing:border-box}html,body{height:100%;margin:0}
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{height:100dvh}button,input{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--ink);font:500 15px/1.45 Manrope,system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
 button{font:inherit;color:inherit}
-header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line)}
+header{display:flex;align-items:center;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;background:var(--card);border-bottom:1px solid var(--line)}
 .bb{width:42px;height:42px;border:0;border-radius:12px;background:var(--bg);font-size:22px;cursor:pointer}
 .brand{display:flex;align-items:center;gap:10px}.brand svg{width:38px;height:38px}
 .brand b{display:block;font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1}.brand small{color:var(--mut);font-size:12px}
@@ -42,9 +42,19 @@ body.open #dr{transform:none}body.open #sh{opacity:1;pointer-events:auto}
 .nav.on{background:var(--bg);color:var(--brand)}
 .sos{margin-top:auto;padding:12px;border-radius:12px;background:var(--bg);color:var(--mut);font-size:13px}.sos b{color:var(--ink)}
 :focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+#map{z-index:0}#ub{margin-left:auto}.chip{padding:11px 16px}.rt button{padding:8px 11px}
+.leaflet-touch .leaflet-bar a{width:40px;height:40px;line-height:40px}
+#st{bottom:calc(22px + env(safe-area-inset-bottom,0px))}#loc{width:46px;height:46px;bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+.pop{max-width:68vw}
+.md{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:3000;padding:16px}.md.on{display:flex}
+.bx{background:var(--card);border-radius:18px;padding:20px;width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px}.bx h3{margin:0;font-size:20px;word-break:break-all}
+.bx input{padding:13px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:16px;background:var(--bg);color:var(--ink)}
+.bx button{padding:13px;border:0;border-radius:12px;background:var(--brand);color:#fff;font-weight:700;cursor:pointer}.bx .alt{background:var(--bg);color:var(--ink)}
+.bx .row{display:flex;gap:8px}.bx .row button{flex:1}#ae{margin:0;color:#b91c1c;font-size:13px;min-height:1em}
+@media (max-width:520px){.brand small{display:none}.wrap{padding:14px 12px 32px}#dr{width:86%}}
 </style></head><body>
 <svg width="0" height="0" style="position:absolute"><symbol id="logo" viewBox="0 0 40 40"><rect width="40" height="40" rx="12" fill="#1b3a5c"/><path d="M20 5c-6 0-10.500 4.400-10.500 10.200C9.500 23 20 35 20 35s10.500-12 10.500-19.800C30.500 9.400 26 5 20 5z" fill="#f5a524"/><circle cx="20" cy="15" r="5.500" fill="#fff" stroke="#1b3a5c" stroke-width="1.800"/><path d="M20 15v5M20 15l-4.500-2.500M20 15l4.500-2.500" stroke="#1b3a5c" stroke-width="1.600" stroke-linecap="round"/></symbol></svg>
-<header><button class="bb" id="bb" aria-label="Меню">☰</button><div class="brand"><svg><use href="#logo"/></svg><div><b>Штурман</b><small>справочник автомобилиста · Москва</small></div></div></header>
+<header><button class="bb" id="bb" aria-label="Меню">☰</button><div class="brand"><svg><use href="#logo"/></svg><div><b>Штурман</b><small>справочник автомобилиста · Москва</small></div></div><button class="bb" id="ub" aria-label="Аккаунт">👤</button></header>
 <div id="sh"></div>
 <nav id="dr"><div class="brand"><svg><use href="#logo"/></svg><div><b>Штурман</b><small>справочник автомобилиста</small></div></div>
 <button class="nav" data-k="all">🗺️ Вся карта</button><button class="nav" data-k="p">🅿️ Парковки</button><button class="nav" data-k="r">🔧 Ремонт и шиномонтаж</button><button class="nav" data-k="g">⛽ АЗС и топливо</button><button class="nav" data-k="faults">⚠️ Неисправности</button><button class="nav" data-k="check">✅ Чек-лист перед поездкой</button>
@@ -54,6 +64,7 @@ body.open #dr{transform:none}body.open #sh{opacity:1;pointer-events:auto}
 <section class="v" id="v-faults"><div class="wrap"><h2>Что проверить первым делом</h2><p>Нажмите на симптом — увидите шаги по порядку.</p><div id="fl"></div></div></section>
 <section class="v" id="v-check"><div class="wrap"><h2>Перед поездкой</h2><p>Две минуты — и меньше сюрпризов в дороге.</p><div class="bar"><i id="pb"></i></div><div id="cl"></div></div></section>
 </main>
+<div class="md" id="au"><div class="bx"><h3 id="at">Вход</h3><div id="af" style="display:contents"><input id="em" type="email" placeholder="Почта" autocomplete="email"><input id="pw" type="password" placeholder="Пароль от 6 символов" autocomplete="current-password"><div class="row"><button id="li">Войти</button><button id="rg" class="alt">Регистрация</button></div><button id="go" class="alt">Войти через Google</button></div><p id="ae"></p><button id="lo" class="alt" hidden>Выйти</button><button id="ax" class="alt">Закрыть</button></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
@@ -81,11 +92,11 @@ const F=[['Не заводится: стартер молчит или щёлк�
 ['Быстро садится аккумулятор',['Напряжение на заведённом моторе: 13,8–14,4 В.','Утечка тока при выключенном зажигании.','Клеммы и ремень генератора.']]];
 const K=['Давление в шинах','Уровень масла','Антифриз','Омывайка и щётки','Свет и поворотники','Документы и страховка','Аптечка, знак, огнетушитель','Топлива хватает до заправки'];
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const map=L.map('map',{zoomControl:false}).setView([55.7558,37.6173],11);
+let map=null,cluster=null,f='all',seq=0,timer,db=null,auth=null,user=null;
+try{map=L.map('map',{zoomControl:false}).setView([55.7558,37.6173],11);
 L.control.zoom({position:'bottomright'}).addTo(map);
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
-const cluster=L.markerClusterGroup({maxClusterRadius:50,chunkedLoading:true}).addTo(map);
-let f='all',seq=0,timer,db=null;
+cluster=L.markerClusterGroup({maxClusterRadius:50,chunkedLoading:true}).addTo(map)}catch(e){map=null;$('#st').textContent='Карта не загрузилась. Проверьте интернет и обновите страницу.'}
 const st=t=>$('#st').textContent=t;
 const kind=t=>t.amenity=='fuel'?'g':t.amenity=='parking'?'p':'r';
 function pop(e,k){const t=e.tags,L=[],nm=t.name||t.brand||t.operator||C[k].n+' без названия';
@@ -103,23 +114,34 @@ const ks=Object.keys(C).filter(k=>(f=='all'||f==k)&&z>=C[k].z);
 if(!ks.length){cluster.clearLayers();st('Приблизьте карту, чтобы увидеть объекты');return}
 const q='[out:json][timeout:25];('+ks.map(k=>C[k].q.map(s=>s+`(${bb});`).join('')).join('')+');out center tags 1500;',id=++seq;
 st('Загружаю…');try{const j=await ov(q);if(id==seq)render(j.elements)}catch(e){if(id==seq)st('Не удалось загрузить данные. Сдвиньте карту и повторите.')}}
-map.on('moveend',()=>{clearTimeout(timer);timer=setTimeout(load,500)});
-$('#loc').onclick=()=>map.locate({setView:true,maxZoom:15});
+if(map)map.on('moveend',()=>{clearTimeout(timer);timer=setTimeout(load,500)});
+$('#loc').onclick=()=>map&&map.locate({setView:true,maxZoom:15});
 function chips(){$('#chips').innerHTML=[['all','Все'],['p','🅿️ Парковки'],['r','🔧 Ремонт'],['g','⛽ АЗС']].map(c=>`<button class="chip${f==c[0]?' on':''}" data-k="${c[0]}">${c[1]}</button>`).join('')}
 function tab(k){document.body.classList.remove('open');document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on',n.dataset.k==k));
 const m=['all','p','r','g'].includes(k);document.querySelectorAll('.v').forEach(v=>v.classList.remove('on'));$(m?'#v-map':'#v-'+k).classList.add('on');
-if(m){f=k;chips();map.invalidateSize();if(k=='g'&&map.getZoom()<11)map.setZoom(11);if(k!='all'&&k!='g'&&map.getZoom()<C[k].z)map.setZoom(C[k].z);load()}}
+if(m){f=k;chips();if(map){map.invalidateSize();if(k=='g'&&map.getZoom()<11)map.setZoom(11);if(k!='all'&&k!='g'&&map.getZoom()<C[k].z)map.setZoom(C[k].z);load()}}}
 $('#chips').onclick=e=>{const c=e.target.closest('.chip');if(c)tab(c.dataset.k)};
 $('#dr').onclick=e=>{const n=e.target.closest('.nav');if(n)tab(n.dataset.k)};
 $('#bb').onclick=()=>document.body.classList.add('open');$('#sh').onclick=()=>document.body.classList.remove('open');
 // Оценки топлива
-async function fb(){if(!FB_CONFIG||/ВАШ/.test(FB_CONFIG.apiKey+FB_CONFIG.appId))return;for(const s of['app','firestore'])await new Promise(r=>{const x=document.createElement('script');x.src=`https://www.gstatic.com/firebasejs/10.12.2/firebase-${s}-compat.js`;x.onload=r;document.head.append(x)});firebase.initializeApp(FB_CONFIG);db=firebase.firestore()}
-map.on('popupopen',async e=>{const el=e.popup.getElement().querySelector('.rt');if(!el||!db)return;const ref=db.collection('fuel').doc(el.dataset.id),d=(await ref.get()).data()||{n:0,s:0};
-el.innerHTML=`Качество топлива: ${d.n?'★ '+(d.s/d.n).toFixed(1)+' ('+d.n+')':'пока нет оценок'}<div>`+[1,2,3,4,5].map(i=>`<button data-v="${i}">${i}★</button>`).join('')+'</div>';
-el.onclick=async ev=>{const v=+ev.target.dataset.v;if(!v)return;await ref.set({n:firebase.firestore.FieldValue.increment(1),s:firebase.firestore.FieldValue.increment(v)},{merge:true});el.textContent='Спасибо за оценку!'}});
+async function fb(){if(!FB_CONFIG||/ВАШ/.test(FB_CONFIG.apiKey+FB_CONFIG.appId))return;for(const s of['app','auth','firestore'])await new Promise(r=>{const x=document.createElement('script');x.src=`https://www.gstatic.com/firebasejs/10.12.2/firebase-${s}-compat.js`;x.onload=r;document.head.append(x)});firebase.initializeApp(FB_CONFIG);db=firebase.firestore();auth=firebase.auth();auth.onAuthStateChanged(u=>{user=u;acct()})}
+if(map)map.on('popupopen',async e=>{const el=e.popup.getElement().querySelector('.rt');if(!el||!db)return;const sid=el.dataset.id;let n=0,t=0,mine=0;
+try{(await db.collection('votes').where('sid','==',sid).get()).forEach(d=>{const x=d.data();n++;t+=x.v;if(user&&x.uid==user.uid)mine=x.v})}catch(err){el.textContent='Оценки временно недоступны';return}
+el.innerHTML=`Качество топлива: ${n?'★ '+(t/n).toFixed(1)+' ('+n+')':'пока нет оценок'}<div>`+(user?[1,2,3,4,5].map(i=>`<button data-v="${i}"${i==mine?' style="background:#fde68a"':''}>${i}★</button>`).join(''):'<button data-login="1">Войдите, чтобы оценить</button>')+'</div>';
+el.onclick=async ev=>{if(ev.target.dataset.login)return openAuth();const v=+ev.target.dataset.v;if(!v||!user)return;try{await db.collection('votes').doc(sid+'_'+user.uid).set({sid,uid:user.uid,v});el.textContent='Спасибо за оценку!'}catch(err){el.textContent='Не удалось сохранить оценку'}}});
 $('#fl').innerHTML=F.map(x=>`<details><summary>${x[0]}</summary><ol>${x[1].map(s=>`<li>${s}</li>`).join('')}</ol></details>`).join('');
 let ck=[];try{ck=JSON.parse(localStorage.getItem('ck')||'[]')}catch(e){}
 function cl(){$('#cl').innerHTML=K.map((t,i)=>`<label class="ck${ck.includes(i)?' d':''}"><input type="checkbox" data-i="${i}"${ck.includes(i)?' checked':''}><span>${t}</span></label>`).join('');$('#pb').style.width=ck.length/K.length*100+'%'}
 $('#cl').onchange=e=>{const i=+e.target.dataset.i;ck=e.target.checked?[...ck,i]:ck.filter(x=>x!==i);try{localStorage.setItem('ck',JSON.stringify(ck))}catch(x){}cl()};
+// Авторизация
+function acct(){$('#ub').textContent=user?'✅':'👤';$('#at').textContent=user?(user.email||'Вы вошли'):'Вход';$('#af').style.display=user?'none':'contents';$('#lo').hidden=!user;$('#ae').textContent=''}
+function openAuth(){$('#au').classList.add('on');if(!auth)$('#ae').textContent='Вход пока не настроен: добавьте ключи Firebase в код.'}
+const shut=()=>$('#au').classList.remove('on');
+$('#ub').onclick=openAuth;$('#ax').onclick=shut;$('#au').onclick=e=>{if(e.target.id=='au')shut()};
+const run=p=>{$('#ae').textContent='';if(!auth)return openAuth();p().then(shut).catch(e=>$('#ae').textContent=({'auth/invalid-credential':'Неверная почта или пароль','auth/email-already-in-use':'Эта почта уже зарегистрирована','auth/weak-password':'Пароль короче 6 символов','auth/invalid-email':'Проверьте адрес почты','auth/popup-closed-by-user':''})[e.code]??'Не получилось. Попробуйте ещё раз.')};
+$('#li').onclick=()=>run(()=>auth.signInWithEmailAndPassword($('#em').value.trim(),$('#pw').value));
+$('#rg').onclick=()=>run(()=>auth.createUserWithEmailAndPassword($('#em').value.trim(),$('#pw').value));
+$('#go').onclick=()=>run(()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
+$('#lo').onclick=()=>auth&&auth.signOut().then(shut);
 cl();fb();tab('all');
 </script></body></html>
