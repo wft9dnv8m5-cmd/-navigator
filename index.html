@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>Штурман — справочник автомобилиста, Москва</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<style>
+:root{--bg:#eef1f4;--card:#fff;--ink:#142033;--mut:#5d6b7c;--line:#dbe2ea;--brand:#1b3a5c;--acc:#f5a524;--g:#16a34a}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:500 15px/1.45 Manrope,system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line)}
+.bb{width:42px;height:42px;border:0;border-radius:12px;background:var(--bg);font-size:22px;cursor:pointer}
+.brand{display:flex;align-items:center;gap:10px}.brand svg{width:38px;height:38px}
+.brand b{display:block;font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1}.brand small{color:var(--mut);font-size:12px}
+main{flex:1;min-height:0;position:relative}
+.v{display:none;position:absolute;inset:0;overflow:auto}.v.on{display:block}
+#map{position:absolute;inset:0}
+.chips{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;overflow-x:auto;z-index:500;scrollbar-width:none}
+.chip{border:0;padding:9px 14px;border-radius:99px;background:var(--card);font-weight:700;font-size:13px;box-shadow:0 2px 8px #0003;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--brand);color:#fff}
+#st{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:500;background:var(--card);padding:8px 16px;border-radius:99px;font-size:13px;font-weight:700;box-shadow:0 2px 10px #0003;max-width:90%;text-align:center}
+#loc{position:absolute;right:10px;bottom:110px;z-index:500;width:42px;height:42px;border:0;border-radius:12px;background:var(--card);font-size:20px;box-shadow:0 2px 8px #0003;cursor:pointer}
+.pin{width:28px;height:28px;border-radius:50%;border:3px solid #fff;display:grid;place-items:center;font-size:13px;box-shadow:0 2px 6px #0005}
+.pop{font:500 13px/1.5 Manrope,system-ui,sans-serif}.pop b{font-size:15px}.pop span{color:var(--mut)}
+.pop a{display:inline-block;margin-top:6px;padding:6px 12px;border-radius:8px;background:var(--brand);color:#fff;text-decoration:none;font-weight:700}
+.rt button{margin:4px 3px 0 0;border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 7px;cursor:pointer}
+.wrap{max-width:660px;margin:0 auto;padding:18px 16px 40px}
+.wrap h2{margin:4px 0;font-size:24px;letter-spacing:-.4px}.wrap>p{margin:0 0 16px;color:var(--mut)}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;padding:13px 15px}
+summary{font-weight:700;cursor:pointer}details ol{margin:10px 0 0;padding-left:20px;color:var(--mut)}
+.ck{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:8px;cursor:pointer}
+.ck input{width:20px;height:20px;accent-color:var(--brand)}.ck.d span{text-decoration:line-through;color:var(--mut)}
+.bar{height:8px;border-radius:9px;background:var(--line);overflow:hidden;margin-bottom:14px}.bar i{display:block;height:100%;width:0;background:var(--g);transition:width .3s}
+#dr{position:fixed;top:0;bottom:0;left:0;width:290px;max-width:84%;background:var(--card);transform:translateX(-105%);transition:transform .25s;z-index:2000;padding:16px 14px;display:flex;flex-direction:column;gap:4px;box-shadow:6px 0 24px #0004}
+#sh{position:fixed;inset:0;background:#0008;opacity:0;pointer-events:none;transition:opacity .25s;z-index:1900}
+body.open #dr{transform:none}body.open #sh{opacity:1;pointer-events:auto}
+#dr .brand{padding:4px 8px 14px}
+.nav{display:flex;gap:12px;align-items:center;padding:13px 12px;border:0;background:none;font-weight:700;text-align:left;border-radius:12px;cursor:pointer}
+.nav.on{background:var(--bg);color:var(--brand)}
+.sos{margin-top:auto;padding:12px;border-radius:12px;background:var(--bg);color:var(--mut);font-size:13px}.sos b{color:var(--ink)}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><symbol id="logo" viewBox="0 0 40 40"><rect width="40" height="40" rx="12" fill="#1b3a5c"/><path d="M20 5c-6 0-10.500 4.400-10.500 10.200C9.500 23 20 35 20 35s10.500-12 10.500-19.800C30.500 9.400 26 5 20 5z" fill="#f5a524"/><circle cx="20" cy="15" r="5.500" fill="#fff" stroke="#1b3a5c" stroke-width="1.800"/><path d="M20 15v5M20 15l-4.500-2.500M20 15l4.500-2.500" stroke="#1b3a5c" stroke-width="1.600" stroke-linecap="round"/></symbol></svg>
+<header><button class="bb" id="bb" aria-label="Меню">☰</button><div class="brand"><svg><use href="#logo"/></svg><div><b>Штурман</b><small>справочник автомобилиста · Москва</small></div></div></header>
+<div id="sh"></div>
+<nav id="dr"><div class="brand"><svg><use href="#logo"/></svg><div><b>Штурман</b><small>справочник автомобилиста</small></div></div>
+<button class="nav" data-k="all">🗺️ Вся карта</button><button class="nav" data-k="p">🅿️ Парковки</button><button class="nav" data-k="r">🔧 Ремонт и шиномонтаж</button><button class="nav" data-k="g">⛽ АЗС и топливо</button><button class="nav" data-k="faults">⚠️ Неисправности</button><button class="nav" data-k="check">✅ Чек-лист перед поездкой</button>
+<div class="sos">Экстренные службы: <b>112</b><br>Данные: © участники OpenStreetMap</div></nav>
+<main>
+<section class="v on" id="v-map" style="overflow:hidden"><div id="map"></div><div class="chips" id="chips"></div><button id="loc" aria-label="Где я">📍</button><div id="st">Загружаю…</div></section>
+<section class="v" id="v-faults"><div class="wrap"><h2>Что проверить первым делом</h2><p>Нажмите на симптом — увидите шаги по порядку.</p><div id="fl"></div></div></section>
+<section class="v" id="v-check"><div class="wrap"><h2>Перед поездкой</h2><p>Две минуты — и меньше сюрпризов в дороге.</p><div class="bar"><i id="pb"></i></div><div id="cl"></div></div></section>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+// === Необязательно: оценки качества топлива через Firebase Firestore ===
+// Замените "ВАШ_API_KEY" и "ВАШ_APP_ID" на значения из Firebase: Project settings → Your apps → Web.
+// Пока там стоят заглушки, оценки отключены и карта работает как обычно.
+const FB_CONFIG={
+  apiKey: "ВАШ_API_KEY",
+  authDomain: "navisturman.firebaseapp.com",
+  projectId: "navisturman",
+  storageBucket: "navisturman.firebasestorage.app",
+  messagingSenderId: "440183867418",
+  appId: "ВАШ_APP_ID"
+};
+
+const C={p:{n:'Парковки',i:'🅿️',c:'#3b82f6',z:13,q:['nwr["amenity"="parking"]']},
+r:{n:'Ремонт',i:'🔧',c:'#f26b1d',z:12,q:['nwr["shop"~"^(car_repair|tyres)$"]','nwr["amenity"="car_repair"]']},
+g:{n:'АЗС',i:'⛽',c:'#16a34a',z:10,q:['nwr["amenity"="fuel"]']}};
+const EP=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+const F=[['Не заводится: стартер молчит или щёлкает',['Клеммы и заряд аккумулятора (нужно от 12,4 В).','Селектор в P/N, нажата педаль тормоза или сцепления.','Предохранители и реле стартера.']],
+['Стартер крутит, но мотор не схватывает',['Есть ли топливо в баке.','Слышно ли бензонасос при включении зажигания.','Свечи зажигания и датчик коленвала.']],
+['Горит Check Engine',['Затяните крышку бака и проедьте немного.','Считайте ошибки OBD2-сканером.','Если лампа мигает — не ехать, вызвать эвакуатор.']],
+['Перегрев двигателя',['Остановиться и заглушить мотор.','Не открывать горячий бачок — подождать 20–30 минут.','Уровень антифриза, вентилятор, термостат.']],
+['Вибрация руля',['Давление в шинах и балансировка колёс.','Грыжи и вздутия на шинах.','Если бьёт при торможении — тормозные диски.']],
+['Быстро садится аккумулятор',['Напряжение на заведённом моторе: 13,8–14,4 В.','Утечка тока при выключенном зажигании.','Клеммы и ремень генератора.']]];
+const K=['Давление в шинах','Уровень масла','Антифриз','Омывайка и щётки','Свет и поворотники','Документы и страховка','Аптечка, знак, огнетушитель','Топлива хватает до заправки'];
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const map=L.map('map',{zoomControl:false}).setView([55.7558,37.6173],11);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+const cluster=L.markerClusterGroup({maxClusterRadius:50,chunkedLoading:true}).addTo(map);
+let f='all',seq=0,timer,db=null;
+const st=t=>$('#st').textContent=t;
+const kind=t=>t.amenity=='fuel'?'g':t.amenity=='parking'?'p':'r';
+function pop(e,k){const t=e.tags,L=[],nm=t.name||t.brand||t.operator||C[k].n+' без названия';
+if(k=='g'){const fu=[['octane_92','АИ-92'],['octane_95','АИ-95'],['octane_98','АИ-98'],['octane_100','АИ-100'],['diesel','ДТ'],['lpg','Газ']].filter(a=>t['fuel:'+a[0]]=='yes').map(a=>a[1]);if(fu.length)L.push('Топливо: '+fu.join(', '))}
+if(k=='p'){if(t.fee)L.push(t.fee=='yes'?'Платная':'Бесплатная');if(t.capacity)L.push('Мест: '+t.capacity);const y={surface:'Открытая',underground:'Подземная','multi-storey':'Многоуровневая'}[t.parking];if(y)L.push(y)}
+if(t.opening_hours)L.push('Часы: '+t.opening_hours);
+const ad=[t['addr:street'],t['addr:housenumber']].filter(Boolean).join(', '),la=e.lat??e.center.lat,lo=e.lon??e.center.lon;
+return `<div class="pop"><b>${esc(nm)}</b>${ad?'<br><span>'+esc(ad)+'</span>':''}${L.length?'<br>'+esc(L.join(' · ')):''}${k=='g'?'<div class="rt" data-id="'+e.type[0]+e.id+'"></div>':''}<br><a href="https://yandex.ru/maps/?rtext=~${la},${lo}&rtt=auto" target="_blank" rel="noopener">Маршрут</a></div>`}
+function render(els){cluster.clearLayers();const ms=els.map(e=>{const k=kind(e.tags||{}),la=e.lat??e.center?.lat,lo=e.lon??e.center?.lon;if(la==null)return null;
+return L.marker([la,lo],{icon:L.divIcon({className:'',html:`<div class="pin" style="background:${C[k].c}">${C[k].i}</div>`,iconSize:[28,28]})}).bindPopup(pop(e,k))}).filter(Boolean);
+cluster.addLayers(ms);st(ms.length?'Найдено: '+ms.length:'Здесь ничего не найдено')}
+async function ov(q){for(const u of EP){try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q)});if(r.ok)return await r.json()}catch(e){}}throw 0}
+async function load(){const z=map.getZoom(),b=map.getBounds(),bb=[b.getSouth(),b.getWest(),b.getNorth(),b.getEast()].map(v=>v.toFixed(5)).join(',');
+const ks=Object.keys(C).filter(k=>(f=='all'||f==k)&&z>=C[k].z);
+if(!ks.length){cluster.clearLayers();st('Приблизьте карту, чтобы увидеть объекты');return}
+const q='[out:json][timeout:25];('+ks.map(k=>C[k].q.map(s=>s+`(${bb});`).join('')).join('')+');out center tags 1500;',id=++seq;
+st('Загружаю…');try{const j=await ov(q);if(id==seq)render(j.elements)}catch(e){if(id==seq)st('Не удалось загрузить данные. Сдвиньте карту и повторите.')}}
+map.on('moveend',()=>{clearTimeout(timer);timer=setTimeout(load,500)});
+$('#loc').onclick=()=>map.locate({setView:true,maxZoom:15});
+function chips(){$('#chips').innerHTML=[['all','Все'],['p','🅿️ Парковки'],['r','🔧 Ремонт'],['g','⛽ АЗС']].map(c=>`<button class="chip${f==c[0]?' on':''}" data-k="${c[0]}">${c[1]}</button>`).join('')}
+function tab(k){document.body.classList.remove('open');document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on',n.dataset.k==k));
+const m=['all','p','r','g'].includes(k);document.querySelectorAll('.v').forEach(v=>v.classList.remove('on'));$(m?'#v-map':'#v-'+k).classList.add('on');
+if(m){f=k;chips();map.invalidateSize();if(k=='g'&&map.getZoom()<11)map.setZoom(11);if(k!='all'&&k!='g'&&map.getZoom()<C[k].z)map.setZoom(C[k].z);load()}}
+$('#chips').onclick=e=>{const c=e.target.closest('.chip');if(c)tab(c.dataset.k)};
+$('#dr').onclick=e=>{const n=e.target.closest('.nav');if(n)tab(n.dataset.k)};
+$('#bb').onclick=()=>document.body.classList.add('open');$('#sh').onclick=()=>document.body.classList.remove('open');
+// Оценки топлива
+async function fb(){if(!FB_CONFIG||/ВАШ/.test(FB_CONFIG.apiKey+FB_CONFIG.appId))return;for(const s of['app','firestore'])await new Promise(r=>{const x=document.createElement('script');x.src=`https://www.gstatic.com/firebasejs/10.12.2/firebase-${s}-compat.js`;x.onload=r;document.head.append(x)});firebase.initializeApp(FB_CONFIG);db=firebase.firestore()}
+map.on('popupopen',async e=>{const el=e.popup.getElement().querySelector('.rt');if(!el||!db)return;const ref=db.collection('fuel').doc(el.dataset.id),d=(await ref.get()).data()||{n:0,s:0};
+el.innerHTML=`Качество топлива: ${d.n?'★ '+(d.s/d.n).toFixed(1)+' ('+d.n+')':'пока нет оценок'}<div>`+[1,2,3,4,5].map(i=>`<button data-v="${i}">${i}★</button>`).join('')+'</div>';
+el.onclick=async ev=>{const v=+ev.target.dataset.v;if(!v)return;await ref.set({n:firebase.firestore.FieldValue.increment(1),s:firebase.firestore.FieldValue.increment(v)},{merge:true});el.textContent='Спасибо за оценку!'}});
+$('#fl').innerHTML=F.map(x=>`<details><summary>${x[0]}</summary><ol>${x[1].map(s=>`<li>${s}</li>`).join('')}</ol></details>`).join('');
+let ck=[];try{ck=JSON.parse(localStorage.getItem('ck')||'[]')}catch(e){}
+function cl(){$('#cl').innerHTML=K.map((t,i)=>`<label class="ck${ck.includes(i)?' d':''}"><input type="checkbox" data-i="${i}"${ck.includes(i)?' checked':''}><span>${t}</span></label>`).join('');$('#pb').style.width=ck.length/K.length*100+'%'}
+$('#cl').onchange=e=>{const i=+e.target.dataset.i;ck=e.target.checked?[...ck,i]:ck.filter(x=>x!==i);try{localStorage.setItem('ck',JSON.stringify(ck))}catch(x){}cl()};
+cl();fb();tab('all');
+</script></body></html>
