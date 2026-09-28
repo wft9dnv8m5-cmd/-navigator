@@ -3,6 +3,9 @@
 <title>Штурман — справочник автомобилиста, Москва</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <style>
 :root{--bg:#eef1f4;--card:#fff;--ink:#142033;--mut:#5d6b7c;--line:#dbe2ea;--brand:#1b3a5c;--acc:#f5a524;--g:#16a34a}
 *{box-sizing:border-box}html,body{height:100%;margin:0}body{height:100dvh}button,input{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -39,12 +42,8 @@ body.open #dr{transform:none}body.open #sh{opacity:1;pointer-events:auto}
 .nav.on{background:var(--bg);color:var(--brand)}
 .sos{margin-top:auto;padding:12px;border-radius:12px;background:var(--bg);color:var(--mut);font-size:13px}.sos b{color:var(--ink)}
 :focus-visible{outline:3px solid var(--acc);outline-offset:2px}
-#cd{position:absolute;left:10px;right:10px;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:600;background:var(--card);border-radius:18px;padding:16px 16px 14px;box-shadow:0 6px 24px #0004;display:none;max-width:420px}#cd.on{display:block}
-#cd h3{margin:2px 0 4px;font-size:17px;padding-right:32px}#cd p{margin:0 0 8px;color:var(--mut);font-size:14px}
-#cd .x{position:absolute;top:10px;right:10px;width:34px;height:34px;border:0;border-radius:10px;background:var(--bg);cursor:pointer}
-#cd a{display:inline-block;margin-top:8px;padding:10px 16px;border-radius:12px;background:var(--brand);color:#fff;text-decoration:none;font-weight:700}
-.tag{display:inline-block;font-size:11px;font-weight:800;color:#fff;border-radius:6px;padding:2px 8px}.pin.on{transform:scale(1.35);box-shadow:0 0 0 4px #fff8}
 #map{z-index:0}#ub{margin-left:auto}.chip{padding:11px 16px}.rt button{padding:8px 11px}
+.leaflet-touch .leaflet-bar a{width:40px;height:40px;line-height:40px}
 #st{bottom:calc(22px + env(safe-area-inset-bottom,0px))}#loc{width:46px;height:46px;bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 .pop{max-width:68vw}
 .md{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:3000;padding:16px}.md.on{display:flex}
@@ -59,20 +58,19 @@ body.open #dr{transform:none}body.open #sh{opacity:1;pointer-events:auto}
 <div id="sh"></div>
 <nav id="dr"><div class="brand"><svg><use href="#logo"/></svg><div><b>Штурман</b><small>справочник автомобилиста</small></div></div>
 <button class="nav" data-k="all">🗺️ Вся карта</button><button class="nav" data-k="p">🅿️ Парковки</button><button class="nav" data-k="r">🔧 Ремонт и шиномонтаж</button><button class="nav" data-k="g">⛽ АЗС и топливо</button><button class="nav" data-k="faults">⚠️ Неисправности</button><button class="nav" data-k="check">✅ Чек-лист перед поездкой</button>
-<div class="sos">Экстренные службы: <b>112</b><br>Карта и данные: 2ГИС</div></nav>
+<div class="sos">Экстренные службы: <b>112</b><br>Данные: © участники OpenStreetMap</div></nav>
 <main>
-<section class="v on" id="v-map" style="overflow:hidden"><div id="map"></div><div class="chips" id="chips"></div><button id="loc" aria-label="Где я">📍</button><div id="cd"></div><div id="st">Загружаю…</div></section>
+<section class="v on" id="v-map" style="overflow:hidden"><div id="map"></div><div class="chips" id="chips"></div><button id="loc" aria-label="Где я">📍</button><div id="st">Загружаю…</div></section>
 <section class="v" id="v-faults"><div class="wrap"><h2>Что проверить первым делом</h2><p>Нажмите на симптом — увидите шаги по порядку.</p><div id="fl"></div></div></section>
 <section class="v" id="v-check"><div class="wrap"><h2>Перед поездкой</h2><p>Две минуты — и меньше сюрпризов в дороге.</p><div class="bar"><i id="pb"></i></div><div id="cl"></div></div></section>
 </main>
 <div class="md" id="au"><div class="bx"><h3 id="at">Вход</h3><div id="af" style="display:contents"><input id="em" type="email" placeholder="Почта" autocomplete="email"><input id="pw" type="password" placeholder="Пароль от 6 символов" autocomplete="current-password"><div class="row"><button id="li">Войти</button><button id="rg" class="alt">Регистрация</button></div><button id="go" class="alt">Войти через Google</button></div><p id="ae"></p><button id="lo" class="alt" hidden>Выйти</button><button id="ax" class="alt">Закрыть</button></div></div>
-<script src="https://mapgl.2gis.com/api/js/v1"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
 // === Необязательно: оценки качества топлива через Firebase Firestore ===
 // Замените "ВАШ_API_KEY" и "ВАШ_APP_ID" на значения из Firebase: Project settings → Your apps → Web.
 // Пока там стоят заглушки, оценки отключены и карта работает как обычно.
-// Ключ 2ГИС: dev.2gis.ru → личный кабинет → ключ для Web. В настройках ключа ограничьте его вашим доменом.
-const DGIS_KEY='YOUR_API_KEY';
 const FB_CONFIG={
   apiKey: "ВАШ_API_KEY",
   authDomain: "navisturman.firebaseapp.com",
@@ -82,7 +80,10 @@ const FB_CONFIG={
   appId: "ВАШ_APP_ID"
 };
 
-const C={p:{n:'Парковки',i:'🅿️',c:'#3b82f6',q:['парковка']},r:{n:'Ремонт',i:'🔧',c:'#f26b1d',q:['автосервис','шиномонтаж']},g:{n:'АЗС',i:'⛽',c:'#16a34a',q:['АЗС']}};
+const C={p:{n:'Парковки',i:'🅿️',c:'#3b82f6',z:12,q:['nwr["amenity"="parking"]["access"!~"private|no"]']},
+r:{n:'Ремонт',i:'🔧',c:'#f26b1d',z:11,q:['nwr["shop"~"^(car_repair|tyres)$"]','nwr["amenity"="car_repair"]']},
+g:{n:'АЗС',i:'⛽',c:'#16a34a',z:9,q:['nwr["amenity"="fuel"]']}};
+const EP=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
 const F=[['Не заводится: стартер молчит или щёлкает',['Клеммы и заряд аккумулятора (нужно от 12,4 В).','Селектор в P/N, нажата педаль тормоза или сцепления.','Предохранители и реле стартера.']],
 ['Стартер крутит, но мотор не схватывает',['Есть ли топливо в баке.','Слышно ли бензонасос при включении зажигания.','Свечи зажигания и датчик коленвала.']],
 ['Горит Check Engine',['Затяните крышку бака и проедьте немного.','Считайте ошибки OBD2-сканером.','Если лампа мигает — не ехать, вызвать эвакуатор.']],
@@ -91,46 +92,44 @@ const F=[['Не заводится: стартер молчит или щёлк�
 ['Быстро садится аккумулятор',['Напряжение на заведённом моторе: 13,8–14,4 В.','Утечка тока при выключенном зажигании.','Клеммы и ремень генератора.']]];
 const K=['Давление в шинах','Уровень масла','Антифриз','Омывайка и щётки','Свет и поворотники','Документы и страховка','Аптечка, знак, огнетушитель','Топлива хватает до заправки'];
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let map=null,f='all',seq=0,timer,last='',db=null,auth=null,user=null,mk=[],items=[];
+let map=null,cluster=null,f='all',seq=0,timer,db=null,auth=null,user=null;
+try{map=L.map('map',{zoomControl:false}).setView([55.7558,37.6173],12);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+map.attributionControl.setPrefix(false);
+cluster=L.markerClusterGroup({maxClusterRadius:50,chunkedLoading:true}).addTo(map)}catch(e){map=null;$('#st').textContent='Карта не загрузилась. Проверьте интернет и обновите страницу.'}
 const st=t=>$('#st').textContent=t;
-if(!DGIS_KEY||DGIS_KEY=='YOUR_API_KEY')st('Добавьте ключ 2ГИС в код (DGIS_KEY)');
-else try{map=new mapgl.Map('map',{center:[37.6173,55.7558],zoom:11,key:DGIS_KEY,zoomControl:'bottomRight'})}catch(e){map=null;st('Карта не загрузилась. Проверьте ключ 2ГИС и интернет.')}
-async function q2(qs,vp){for(const fl of['items.point,items.address_name,items.schedule','items.point,items.address_name']){let out=[],tot=0,ok=1;
-for(const p of[1,2]){const j=await(await fetch(`https://catalog.api.2gis.ru/3.0/items?q=${encodeURIComponent(qs)}&type=branch&viewpoint1=${vp[0]}&viewpoint2=${vp[1]}&fields=${fl}&page_size=50&page=${p}&key=${DGIS_KEY}`)).json();
-if(j.meta?.code==404)break;if(j.meta?.code!=200){ok=0;break}const r=j.result;out=out.concat(r.items||[]);tot=r.total||0;if(out.length>=tot)break}
-if(ok)return{out,tot}}throw 0}
-function draw(){mk.forEach(m=>m.destroy());mk=items.map((d,i)=>new mapgl.HtmlMarker(map,{coordinates:[d.lon,d.lat],html:`<div class="pin" data-i="${i}" style="background:${C[d.k].c}">${C[d.k].i}</div>`,anchor:[14,14]}))}
-async function load(force){if(!map)return;const id=++seq;
-try{const b=map.getBounds(),sw=b.southWest,ne=b.northEast,vp=[sw[0].toFixed(5)+','+ne[1].toFixed(5),ne[0].toFixed(5)+','+sw[1].toFixed(5)],key=f+vp;
-if(!force&&key==last){seq--;return}last=key;st('Загружаю…');
-const rs=await Promise.all(Object.keys(C).filter(k=>f=='all'||f==k).flatMap(k=>C[k].q.map(qs=>q2(qs,vp).then(r=>({k,r})))));
-if(id!=seq)return;let tot=0,all=[];
-rs.forEach(({k,r})=>{tot+=r.tot;r.out.filter(x=>x.point).forEach(x=>all.push({id:x.id,k,n:x.name,lon:x.point.lon,lat:x.point.lat,a:x.address_name||'',h:x.schedule?.is_24x7?'Круглосуточно':''}))});
-const seen=new Set();items=all.filter(d=>!seen.has(d.id)&&seen.add(d.id));closeCard();draw();
-st(items.length?(items.length<tot?`Показано ${items.length} из ${tot} — приблизьте карту`:`Найдено: ${items.length}`):'Здесь ничего не найдено')}
-catch(e){if(id==seq){last='';st('Не удалось загрузить данные. Проверьте ключ 2ГИС.')}}}
-function closeCard(){$('#cd').classList.remove('on');document.querySelectorAll('.pin.on').forEach(e=>e.classList.remove('on'))}
-function pick(i){const d=items[i];document.querySelectorAll('.pin').forEach(e=>e.classList.toggle('on',+e.dataset.i===i));
-$('#cd').innerHTML=`<button class="x" aria-label="Закрыть">✕</button><span class="tag" style="background:${C[d.k].c}">${C[d.k].n}</span><h3>${esc(d.n||C[d.k].n)}</h3><p>${esc([d.a,d.h].filter(Boolean).join(' · '))}</p>${d.k=='g'?'<div class="rt"></div>':''}<a href="https://2gis.ru/moscow/firm/${esc(String(d.id).split('_')[0])}" target="_blank" rel="noopener">Открыть в 2ГИС</a>`;
-$('#cd').classList.add('on');if(d.k=='g')rate(d.id,$('#cd .rt'))}
-$('#map').addEventListener('click',e=>{const p=e.target.closest('.pin');if(p)pick(+p.dataset.i)});
-$('#cd').onclick=e=>{if(e.target.closest('.x'))closeCard()};
-if(map){const sc=()=>{clearTimeout(timer);timer=setTimeout(()=>load(),700)};['moveend','centerend','zoomend','dragend','styleload'].forEach(ev=>map.on(ev,sc))}
-$('#loc').onclick=()=>navigator.geolocation&&map&&navigator.geolocation.getCurrentPosition(p=>{map.setCenter([p.coords.longitude,p.coords.latitude]).setZoom(15)},()=>st('Нет доступа к геолокации'));
-async function rate(sid,el){if(!db||!el)return;let n=0,t=0,mine=0;
-try{(await db.collection('votes').where('sid','==',sid).get()).forEach(d=>{const x=d.data();n++;t+=x.v;if(user&&x.uid==user.uid)mine=x.v})}catch(err){el.textContent='Оценки временно недоступны';return}
-el.innerHTML=`Качество топлива: ${n?'★ '+(t/n).toFixed(1)+' ('+n+')':'пока нет оценок'}<div>`+(user?[1,2,3,4,5].map(i=>`<button data-v="${i}"${i==mine?' style="background:#fde68a"':''}>${i}★</button>`).join(''):'<button data-login="1">Войдите, чтобы оценить</button>')+'</div>';
-el.onclick=async ev=>{if(ev.target.dataset.login)return openAuth();const v=+ev.target.dataset.v;if(!v||!user)return;try{await db.collection('votes').doc(sid+'_'+user.uid).set({sid,uid:user.uid,v});el.textContent='Спасибо за оценку!'}catch(err){el.textContent='Не удалось сохранить оценку'}}}
+const kind=t=>t.amenity=='fuel'?'g':t.amenity=='parking'?'p':'r';
+function pop(e,k){const t=e.tags,L=[],nm=t.name||t.brand||t.operator||C[k].n+' без названия';
+if(k=='g'){const fu=[['octane_92','АИ-92'],['octane_95','АИ-95'],['octane_98','АИ-98'],['octane_100','АИ-100'],['diesel','ДТ'],['lpg','Газ']].filter(a=>t['fuel:'+a[0]]=='yes').map(a=>a[1]);if(fu.length)L.push('Топливо: '+fu.join(', '))}
+if(k=='p'){if(t.fee)L.push(t.fee=='yes'?'Платная':'Бесплатная');if(t.capacity)L.push('Мест: '+t.capacity);const y={surface:'Открытая',underground:'Подземная','multi-storey':'Многоуровневая'}[t.parking];if(y)L.push(y)}
+if(t.opening_hours)L.push('Часы: '+t.opening_hours);
+const ad=[t['addr:street'],t['addr:housenumber']].filter(Boolean).join(', '),la=e.lat??e.center.lat,lo=e.lon??e.center.lon;
+return `<div class="pop"><b>${esc(nm)}</b>${ad?'<br><span>'+esc(ad)+'</span>':''}${L.length?'<br>'+esc(L.join(' · ')):''}${k=='g'?'<div class="rt" data-id="'+e.type[0]+e.id+'"></div>':''}<br><a href="https://yandex.ru/maps/?rtext=~${la},${lo}&rtt=auto" target="_blank" rel="noopener">Маршрут</a></div>`}
+function render(els){cluster.clearLayers();const ms=els.map(e=>{const k=kind(e.tags||{}),la=e.lat??e.center?.lat,lo=e.lon??e.center?.lon;if(la==null)return null;
+return L.marker([la,lo],{icon:L.divIcon({className:'',html:`<div class="pin" style="background:${C[k].c}">${C[k].i}</div>`,iconSize:[28,28]})}).bindPopup(pop(e,k))}).filter(Boolean);
+cluster.addLayers(ms);st(ms.length?'Найдено: '+ms.length:'Здесь ничего не найдено')}
+async function ov(q){for(const u of EP){try{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q)});if(r.ok)return await r.json()}catch(e){}}throw 0}
+async function load(){const z=map.getZoom(),b=map.getBounds(),bb=[b.getSouth(),b.getWest(),b.getNorth(),b.getEast()].map(v=>v.toFixed(5)).join(',');
+const ks=Object.keys(C).filter(k=>(f=='all'||f==k)&&z>=C[k].z);
+if(!ks.length){cluster.clearLayers();st('Приблизьте карту, чтобы увидеть объекты');return}
+const q='[out:json][timeout:40];('+ks.map(k=>C[k].q.map(s=>s+`(${bb});`).join('')).join('')+');out center tags 5000;',id=++seq;
+st('Загружаю…');try{const j=await ov(q);if(id==seq){render(j.elements);const sk=Object.keys(C).filter(k=>(f=='all'||f==k)&&z<C[k].z);if(sk.length)st($('#st').textContent+' · '+sk.map(k=>C[k].n.toLowerCase()).join(', ')+': приблизьте карту')}}catch(e){if(id==seq)st('Не удалось загрузить данные. Сдвиньте карту и повторите.')}}
+if(map)map.on('moveend',()=>{clearTimeout(timer);timer=setTimeout(load,500)});
+$('#loc').onclick=()=>map&&map.locate({setView:true,maxZoom:15});
 function chips(){$('#chips').innerHTML=[['all','Все'],['p','🅿️ Парковки'],['r','🔧 Ремонт'],['g','⛽ АЗС']].map(c=>`<button class="chip${f==c[0]?' on':''}" data-k="${c[0]}">${c[1]}</button>`).join('')}
 function tab(k){document.body.classList.remove('open');document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('on',n.dataset.k==k));
 const m=['all','p','r','g'].includes(k);document.querySelectorAll('.v').forEach(v=>v.classList.remove('on'));$(m?'#v-map':'#v-'+k).classList.add('on');
-if(m){f=k;chips();if(map){load(1)}}}
+if(m){f=k;chips();if(map){map.invalidateSize();if(k=='g'&&map.getZoom()<11)map.setZoom(11);if(k!='all'&&k!='g'&&map.getZoom()<C[k].z)map.setZoom(C[k].z);load()}}}
 $('#chips').onclick=e=>{const c=e.target.closest('.chip');if(c)tab(c.dataset.k)};
 $('#dr').onclick=e=>{const n=e.target.closest('.nav');if(n)tab(n.dataset.k)};
 $('#bb').onclick=()=>document.body.classList.add('open');$('#sh').onclick=()=>document.body.classList.remove('open');
 // Оценки топлива
 async function fb(){if(!FB_CONFIG||/ВАШ/.test(FB_CONFIG.apiKey+FB_CONFIG.appId))return;for(const s of['app','auth','firestore'])await new Promise(r=>{const x=document.createElement('script');x.src=`https://www.gstatic.com/firebasejs/10.12.2/firebase-${s}-compat.js`;x.onload=r;document.head.append(x)});firebase.initializeApp(FB_CONFIG);db=firebase.firestore();auth=firebase.auth();auth.onAuthStateChanged(u=>{user=u;acct()})}
-
+if(map)map.on('popupopen',async e=>{const el=e.popup.getElement().querySelector('.rt');if(!el||!db)return;const sid=el.dataset.id;let n=0,t=0,mine=0;
+try{(await db.collection('votes').where('sid','==',sid).get()).forEach(d=>{const x=d.data();n++;t+=x.v;if(user&&x.uid==user.uid)mine=x.v})}catch(err){el.textContent='Оценки временно недоступны';return}
+el.innerHTML=`Качество топлива: ${n?'★ '+(t/n).toFixed(1)+' ('+n+')':'пока нет оценок'}<div>`+(user?[1,2,3,4,5].map(i=>`<button data-v="${i}"${i==mine?' style="background:#fde68a"':''}>${i}★</button>`).join(''):'<button data-login="1">Войдите, чтобы оценить</button>')+'</div>';
+el.onclick=async ev=>{if(ev.target.dataset.login)return openAuth();const v=+ev.target.dataset.v;if(!v||!user)return;try{await db.collection('votes').doc(sid+'_'+user.uid).set({sid,uid:user.uid,v});el.textContent='Спасибо за оценку!'}catch(err){el.textContent='Не удалось сохранить оценку'}}});
 $('#fl').innerHTML=F.map(x=>`<details><summary>${x[0]}</summary><ol>${x[1].map(s=>`<li>${s}</li>`).join('')}</ol></details>`).join('');
 let ck=[];try{ck=JSON.parse(localStorage.getItem('ck')||'[]')}catch(e){}
 function cl(){$('#cl').innerHTML=K.map((t,i)=>`<label class="ck${ck.includes(i)?' d':''}"><input type="checkbox" data-i="${i}"${ck.includes(i)?' checked':''}><span>${t}</span></label>`).join('');$('#pb').style.width=ck.length/K.length*100+'%'}
